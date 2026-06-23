@@ -1,0 +1,16 @@
+### Criar uma nova tarefa (POST)
+POST http://localhost:8081/api/tasks
+Content-Type: application/json
+
+{
+  "titulo": "Estudar Spring Boot com o Hélio",
+  "descricao": "Finalizar a fase de testes locais e configurar o Scheduler",
+  "dataHoraEvento": "2026-06-23T15:00:00",
+  "status": "AGUARDANDO_AVISO"
+}
+
+###
+
+### Listar todas as tarefas (GET)
+GET http://localhost:8081/api/tasks
+Accept: application/json
