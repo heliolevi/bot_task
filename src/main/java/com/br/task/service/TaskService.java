@@ -5,6 +5,10 @@ import com.br.task.model.TaskStatus;
 import com.br.task.repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.google.api.services.calendar.model.Event;
+import com.br.task.model.TaskStatus;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,5 +43,35 @@ public class TaskService {
             task.setStatus(novoStatus);
             taskRepository.save(task);
         });
+    }
+
+    public void sincronizarEventoDoGoogle(Event googleEvent) {
+        // Verifica se o evento já foi sincronizado antes para não duplicar
+        if (taskRepository.findByGoogleEventId(googleEvent.getId()).isPresent()) {
+            return; // Já existe, não faz nada
+        }
+
+        // Cria uma nova Task a partir do evento do Google
+        Task novaTarefa = new Task();
+        novaTarefa.setTitulo(googleEvent.getSummary());
+        novaTarefa.setDescricao(googleEvent.getDescription() != null ? googleEvent.getDescription() : "Sem descrição");
+        novaTarefa.setGoogleEventId(googleEvent.getId());
+        novaTarefa.setStatus(TaskStatus.AGUARDANDO_AVISO); // Deixa pronto para o WhatsApp vigiar!
+
+        // Converte a data de início do Google (DateTime) para o LocalDateTime do Java
+        if (googleEvent.getStart().getDateTime() != null) {
+            long epochMilli = googleEvent.getStart().getDateTime().getValue();
+            LocalDateTime dataHora = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
+            novaTarefa.setDataHoraEvento(dataHora);
+        } else {
+            // Trata caso seja um evento de "Dia Inteiro" (sem horário específico)
+            long epochMilli = googleEvent.getStart().getDate().getValue();
+            LocalDateTime dataHora = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
+            novaTarefa.setDataHoraEvento(dataHora);
+        }
+
+        // Salva no banco PostgreSQL
+        taskRepository.save(novaTarefa);
+        System.out.println("📥 Nova tarefa sincronizada do Google Agenda: " + novaTarefa.getTitulo());
     }
 }
